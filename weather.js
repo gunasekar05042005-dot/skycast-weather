@@ -1,21 +1,13 @@
-// api/weather.js — Vercel Serverless Function
-// API key is stored in Vercel Environment Variables (never exposed to browser)
-
-export default async function handler(req, res) {
-  // CORS headers
+// Vercel Serverless Function — CommonJS format (required)
+module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
 
   const API_KEY = process.env.OWM_API_KEY;
-
   if (!API_KEY) {
-    return res.status(500).json({
-      error: "OWM_API_KEY is not set. Add it in Vercel → Settings → Environment Variables.",
-    });
+    return res.status(500).json({ error: "OWM_API_KEY not set in Vercel Environment Variables." });
   }
 
   const { city, lat, lon, zip, country } = req.query;
@@ -27,12 +19,9 @@ export default async function handler(req, res) {
   } else if (city) {
     url = `${BASE}?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric`;
   } else if (zip) {
-    const cc = country || "IN";
-    url = `${BASE}?zip=${encodeURIComponent(zip)},${cc}&appid=${API_KEY}&units=metric`;
+    url = `${BASE}?zip=${encodeURIComponent(zip)},${country || "IN"}&appid=${API_KEY}&units=metric`;
   } else {
-    return res.status(400).json({
-      error: "Provide ?city=, ?lat=&lon=, or ?zip= as query parameters.",
-    });
+    return res.status(400).json({ error: "Provide ?city=, ?lat=&lon=, or ?zip=" });
   }
 
   try {
@@ -40,33 +29,26 @@ export default async function handler(req, res) {
     const data = await upstream.json();
 
     if (!upstream.ok) {
-      if (upstream.status === 401)
-        return res.status(401).json({ error: "Invalid API key." });
-      if (upstream.status === 404)
-        return res.status(404).json({
-          error: "Location not found. Try adding a country code (e.g. Ranipet,IN) or use coordinates.",
-        });
-      return res.status(upstream.status).json({
-        error: data.message || "Error from OpenWeatherMap.",
-      });
+      if (upstream.status === 401) return res.status(401).json({ error: "Invalid API key." });
+      if (upstream.status === 404) return res.status(404).json({ error: "Location not found. Try adding country code e.g. Ranipet,IN" });
+      return res.status(upstream.status).json({ error: data.message || "Weather API error." });
     }
 
-    const round = (n, d = 1) => Math.round(n * 10 ** d) / 10 ** d;
+    const r = (n, d = 1) => Math.round(n * 10 ** d) / 10 ** d;
 
     return res.status(200).json({
       city:        data.name,
       country:     data.sys.country,
-      lat:         round(data.coord.lat, 4),
-      lon:         round(data.coord.lon, 4),
-      temp:        round(data.main.temp),
-      feels_like:  round(data.main.feels_like),
-      temp_min:    round(data.main.temp_min),
-      temp_max:    round(data.main.temp_max),
+      lat:         r(data.coord.lat, 4),
+      lon:         r(data.coord.lon, 4),
+      temp:        r(data.main.temp),
+      feels_like:  r(data.main.feels_like),
+      temp_min:    r(data.main.temp_min),
+      temp_max:    r(data.main.temp_max),
       humidity:    data.main.humidity,
       pressure:    data.main.pressure,
       condition:   data.weather[0].main,
-      description: data.weather[0].description.charAt(0).toUpperCase() +
-                   data.weather[0].description.slice(1),
+      description: data.weather[0].description.charAt(0).toUpperCase() + data.weather[0].description.slice(1),
       icon_code:   data.weather[0].icon,
       wind_speed:  data.wind.speed,
       visibility:  Math.floor((data.visibility || 0) / 1000),
@@ -74,4 +56,4 @@ export default async function handler(req, res) {
   } catch (err) {
     return res.status(500).json({ error: "Server error: " + err.message });
   }
-}
+};
