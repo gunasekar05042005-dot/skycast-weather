@@ -1,11 +1,5 @@
 {
   "version": 2,
-  "framework": null,
-  "functions": {
-    "api/weather.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "routes": [
     { "src": "/api/weather", "dest": "/api/weather.js" },
     { "src": "/(.*)",        "dest": "/index.html"     }
