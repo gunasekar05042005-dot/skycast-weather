@@ -567,7 +567,7 @@
   async function fetchWeather(queryString) {
     showLoader();
     try {
-      const res  = await fetch('/api/weather?' + queryString);
+      const res  = await fetch('/.netlify/functions/weather?' + queryString);
       const data = await res.json();
       if (data.error) { showError(data.error); return; }
       renderWeather(data);
